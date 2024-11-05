@@ -1,33 +1,11 @@
 module.exports = {
-  BTCNode: {
-    chain: 'BTC',
+  THTNode: {
+    chain: 'THT',
     host: 'localhost',
     protocol: 'http',
     rpcPort: '20009',
-    rpcUser: 'bitpaytest',
+    rpcUser: 'thoughtnetworktest',
     rpcPass: 'local321',
-  },
-  BCHNode: {
-    chain: 'BCH',
-    host: 'localhost',
-    protocol: 'http',
-    rpcPort: '20003',
-    rpcUser: 'bitpaytest',
-    rpcPass: 'local321'
-  },
-  DogeNode: {
-    chain: 'DOGE',
-    host: 'localhost',
-    protocol: 'http',
-    rpcPort: '20004',
-    rpcUser: 'bitpaytest',
-    rpcPass: 'local321'
-  },
-  XRPNode: {
-    chain: 'XRP',
-    host: 'localhost',
-    protocol: 'ws',
-    rpcPort: '6006',
   },
   ETHNode: {
     chain: 'ETH',
@@ -48,12 +26,5 @@ module.exports = {
         type: 'ERC20'
       }
     }
-  },
-  ARBNode: {
-    chain: 'ARB',
-    host: 'localhost',
-    rpcPort: '8546',
-    protocol: 'http',
-    isEVM: true
   }
 };

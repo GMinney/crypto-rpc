@@ -1,12 +1,12 @@
-const { CryptoRpc } = require('../');
+const { CryptoRpc } = require('..');
 const assert = require('assert');
 const mocha = require('mocha');
 const sinon = require('sinon');
 const { expect } = require('chai');
 const { describe, it } = mocha;
 const config = {
-  chain: 'BTC',
-  host: 'bitcoin',
+  chain: 'THT',
+  host: 'thought',
   protocol: 'http',
   rpcPort: '8333',
   rpcUser: 'cryptorpc',
@@ -20,39 +20,39 @@ const config = {
   }
 };
 
-describe('BTC Tests', function() {
+describe('THT Tests', function() {
   this.timeout(10000);
-  const currency = 'BTC';
+  const currency = 'THT';
   const { currencyConfig } = config;
   const rpcs = new CryptoRpc(config, currencyConfig);
-  const bitcoin = rpcs.get(currency);
+  const thought = rpcs.get(currency);
   const walletName = 'wallet0';
   const addressLabel = 'abc123';
   let walletAddress = '';
 
   before(async () => {
-    await bitcoin.asyncCall('createwallet', [walletName]);
-    walletAddress = await bitcoin.asyncCall('getnewaddress', [addressLabel]);
+    await thought.asyncCall('createwallet', [walletName]);
+    walletAddress = await thought.asyncCall('getnewaddress', [addressLabel]);
   });
 
   it('should determine if wallet is encrypted', async () => {
-    expect(await bitcoin.isWalletEncrypted()).to.eq(false);
+    expect(await thought.isWalletEncrypted()).to.eq(false);
     try {
-      await bitcoin.asyncCall('encryptWallet', ['password']);
+      await thought.asyncCall('encryptWallet', ['password']);
       await new Promise(resolve => setTimeout(resolve, 5000));
     } catch (e) {
       console.warn('wallet already encrypted');
     }
-    expect(await bitcoin.isWalletEncrypted()).to.eq(true);
-    await bitcoin.asyncCall('generatetoaddress', [101, walletAddress]);
+    expect(await thought.isWalletEncrypted()).to.eq(true);
+    await thought.asyncCall('generatetoaddress', [101, walletAddress]);
   });
 
   it('walletUnlock should unlock wallet successfully', async () => {
-    await bitcoin.walletUnlock({ passphrase: config.currencyConfig.unlockPassword, time: 10 });
+    await thought.walletUnlock({ passphrase: config.currencyConfig.unlockPassword, time: 10 });
   });
 
   it('walletUnlock should error on if wrong args', async () => {
-    await bitcoin.walletUnlock({ passphrase: config.currencyConfig.unlockPassword })
+    await thought.walletUnlock({ passphrase: config.currencyConfig.unlockPassword })
       .catch(err => {
         assert(err);
         expect(typeof err).to.eq('object');
@@ -62,7 +62,7 @@ describe('BTC Tests', function() {
   });
 
   it('walletUnlock should error on if wrong passphrase', async () => {
-    await bitcoin.walletUnlock({ passphrase: 'wrong', time: 10 })
+    await thought.walletUnlock({ passphrase: 'wrong', time: 10 })
       .catch(err => {
         assert(err);
         expect(typeof err).to.eq('object');
@@ -78,20 +78,20 @@ describe('BTC Tests', function() {
 
   /* These tests don't work in the pipeline because the docker regtest blockchain isn't mature enough to give a fee */
   // it('should be able to estimateFee', async () => {
-  //   const fee = await bitcoin.estimateFee({ nBlocks: 2 });
+  //   const fee = await thought.estimateFee({ nBlocks: 2 });
   //   expect(fee).to.be.gte(1);
   // });
 
   // it('should be able to estimateFee with mode', async () => {
-  //   const fee = await bitcoin.estimateFee({ nBlocks: 2, mode: 'economical' });
+  //   const fee = await thought.estimateFee({ nBlocks: 2, mode: 'economical' });
   //   expect(fee).to.be.gte(1);
   // });
 
-  it('should convert fee to satoshis per kilobyte with estimateFee', async () => {
-    sinon.stub(bitcoin.rpc, 'estimateSmartFee').callsFake((nBlocks, cb) => {
+  it('should convert fee to notions per kilobyte with estimateFee', async () => {
+    sinon.stub(thought.rpc, 'estimateSmartFee').callsFake((nBlocks, cb) => {
       cb(null, { result: { feerate: 0.00001234, blocks: 2 } });
     });
-    const fee = await bitcoin.estimateFee({ nBlocks: 2 });
+    const fee = await thought.estimateFee({ nBlocks: 2 });
     expect(fee).to.be.eq(1.234);
   });
 
@@ -135,7 +135,7 @@ describe('BTC Tests', function() {
     payToArray.push(transaction4);
     const maxOutputs = 2;
     const maxValue = 1e8;
-    const eventEmitter = rpcs.rpcs.BTC.emitter;
+    const eventEmitter = rpcs.rpcs.THT.emitter;
     let eventCounter = 0;
     let emitResults = [];
     const emitPromise = new Promise(resolve => {
@@ -175,7 +175,7 @@ describe('BTC Tests', function() {
       { address, amount },
       { address: 'funkyColdMedina', amount: 1 }
     ];
-    const eventEmitter = rpcs.rpcs.BTC.emitter;
+    const eventEmitter = rpcs.rpcs.THT.emitter;
     let emitResults = [];
     const emitPromise = new Promise(resolve => {
       eventEmitter.on('failure', (emitData) => {
@@ -236,9 +236,9 @@ describe('BTC Tests', function() {
     batch[address1] = amount1;
     batch[address2] = amount2;
 
-    await bitcoin.walletUnlock({ passphrase: config.currencyConfig.unlockPassword, time: 10 });
-    let txid = await bitcoin.sendMany({ batch, options: null });
-    await bitcoin.walletLock();
+    await thought.walletUnlock({ passphrase: config.currencyConfig.unlockPassword, time: 10 });
+    let txid = await thought.sendMany({ batch, options: null });
+    await thought.walletLock();
     expect(txid).to.have.lengthOf(64);
     assert(txid);
   });
@@ -310,7 +310,7 @@ describe('BTC Tests', function() {
       let confirmations = await rpcs.getConfirmations({ currency, txid });
       assert(confirmations != undefined);
       expect(confirmations).to.eq(0);
-      await bitcoin.asyncCall('generatetoaddress', [1, config.currencyConfig.sendTo]);
+      await thought.asyncCall('generatetoaddress', [1, config.currencyConfig.sendTo]);
       confirmations = await rpcs.getConfirmations({ currency, txid });
       expect(confirmations).to.eq(1);
     });
@@ -321,10 +321,10 @@ describe('BTC Tests', function() {
 
     describe('Unloaded wallet', function() {
       before(async () => {
-        await bitcoin.asyncCall('unloadwallet', [walletName]);
+        await thought.asyncCall('unloadwallet', [walletName]);
       });
       after(async () => {
-        await bitcoin.asyncCall('loadwallet', [walletName]);
+        await thought.asyncCall('loadwallet', [walletName]);
       });
 
       it('should error if no wallet is loaded', async () => {
@@ -388,7 +388,7 @@ describe('BTC Tests', function() {
         let confirmations = await rpcs.getConfirmations({ currency, txid });
         assert(confirmations != undefined);
         expect(confirmations).to.eq(0);
-        await bitcoin.asyncCall('generatetoaddress', [1, config.currencyConfig.sendTo]);
+        await thought.asyncCall('generatetoaddress', [1, config.currencyConfig.sendTo]);
         confirmations = await rpcs.getConfirmations({ currency, txid });
         expect(confirmations).to.eq(1);
       });
@@ -401,9 +401,9 @@ describe('BTC Tests', function() {
         expect(output.scriptPubKey.address).to.equal(config.currencyConfig.sendTo);
       });
     
-      it('should get tx output info for bitcore', async() => {
-        const output1 = await rpcs.getTxOutputInfo({ txid, vout: 0, transformToBitcore: true });
-        const output2 = await rpcs.getTxOutputInfo({ txid, vout: 1, transformToBitcore: true });
+      it('should get tx output info for thoughtcore', async() => {
+        const output1 = await rpcs.getTxOutputInfo({ txid, vout: 0, transformToThoughtcore: true });
+        const output2 = await rpcs.getTxOutputInfo({ txid, vout: 1, transformToThoughtcore: true });
         let output = [output1, output2].find(v => v.value === 0.0001);
         expect(output).to.exist;
         expect(output.address).to.equal(config.currencyConfig.sendTo);
@@ -419,12 +419,12 @@ describe('BTC Tests', function() {
     expect(info).to.have.property('headers');
     expect(info).to.have.property('bestblockhash');
     expect(info).to.have.property('difficulty');
-    // expect(info).to.have.property('time'); // TODO this is added in newer bitcoin core version
+    // expect(info).to.have.property('time'); // TODO this is added in newer thought core version
     expect(info).to.have.property('mediantime');
     expect(info).to.have.property('verificationprogress');
     expect(info).to.have.property('initialblockdownload');
     expect(info).to.have.property('chainwork');
-    // expect(info).to.have.property('size_on_disk'); // TODO this is added in newer bitcoin core version
+    // expect(info).to.have.property('size_on_disk'); // TODO this is added in newer thought core version
     expect(info).to.have.property('pruned');
     expect(info).to.have.property('warnings');
   });
