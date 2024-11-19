@@ -84,13 +84,6 @@ services:
       -p 8545
       -a 20
 
-  rippled:
-    networks:
-      default:
-        ipv4_address: 172.28.0.8
-    build:
-      context: .
-      dockerfile: ./tests/docker/rippled.Dockerfile
 
 volumes:
   my_data1:
