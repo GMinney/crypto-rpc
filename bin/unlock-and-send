@@ -24,7 +24,7 @@ const UnlockSendProgram = {
     async function main() {
       const { node, currency, address, amount } = program;
       const rpcHost = config[node];
-      if(rpcHost) {
+      if (rpcHost) {
         const { host, rpcPort, protocol, user, pass } = rpcHost;
         const currencyConfig = rpcHost.currencies[currency] || {};
         let rpcs = new CryptoRPC({
@@ -37,7 +37,7 @@ const UnlockSendProgram = {
 
         rpcs.cmdlineUnlock(currency, 6000, (err, relock) => {
           rpcs.sendToAddress(currency, address, amount, (err, tx) => {
-            if(err) console.error(err);
+            if (err) console.error(err);
             global.console.log(tx);
             relock();
           });
@@ -54,7 +54,7 @@ const UnlockSendProgram = {
 if (require.main === module) {
   const config = require('../config');
   const program = require('commander');
-  try{
+  try {
     program
       .option('--node <node>')
       .option('--currency <currency>')

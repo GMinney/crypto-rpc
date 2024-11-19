@@ -12,7 +12,7 @@ module.exports = {
     host: 'localhost',
     rpcPort: '8545',
     protocol: 'http',
-    tokens : {
+    tokens: {
       GUSD: {
         tokenContractAddress: '0x00C3f2662F4F56623712BaC28179E7aDf952c0F0',
         type: 'ERC20'

@@ -18,7 +18,6 @@ services:
       - geth
       - ganache
 
-
   thought:
     image: thoughtnetwork/thought-core:22.0
     ports:
@@ -26,23 +25,7 @@ services:
     networks:
       default:
         ipv4_address: 172.28.0.3
-    command:
-      -printtoconsole
-      -regtest=1
-      -txindex=1
-      -listen=1
-      -server=1
-      -dnsseed=0
-      -upnp=0
-      -port=8332
-      -rpcport=8333
-      -rpcallowip=172.0.0.0/8
-      -rpcbind=0.0.0.0
-      -rpcuser=cryptorpc
-      -rpcpassword=local321
-      -fallbackfee=0.0002
-      -zmqpubrawblock=tcp://0.0.0.0:38332
-      -zmqpubrawtx=tcp://0.0.0.0:38333
+    command: -printtoconsole -regtest=1 -txindex=1 -listen=1 -server=1 -dnsseed=0 -upnp=0 -port=8332 -rpcport=8333 -rpcallowip=172.0.0.0/8 -rpcbind=0.0.0.0 -rpcuser=cryptorpc -rpcpassword=local321 -fallbackfee=0.0002 -zmqpubrawblock=tcp://0.0.0.0:38332 -zmqpubrawtx=tcp://0.0.0.0:38333
     restart: always
 
   geth:
@@ -54,21 +37,7 @@ services:
     networks:
       default:
         ipv4_address: 172.28.0.7
-    command:
-      geth
-      --dev
-      --datadir=/home/kjoseph/nodes/dev/geth
-      --networkid=1337
-      --http
-      --http.api=web3,eth,debug,personal,net
-      --http.corsdomain='*'
-      --http.vhosts='*'
-      --http.addr=0.0.0.0
-      --http.port=8545
-      --keystore=/keystore
-      --allow-insecure-unlock
-      --unlock=00a329c0648769a73afac7f9381e08fb43dbea72
-      --password=/keystore/pw
+    command: geth --dev --datadir=/home/kjoseph/nodes/dev/geth --networkid=1337 --http --http.api=web3,eth,debug,personal,net --http.corsdomain='*' --http.vhosts='*' --http.addr=0.0.0.0 --http.port=8545 --keystore=/keystore --allow-insecure-unlock --unlock=00a329c0648769a73afac7f9381e08fb43dbea72 --password=/keystore/pw
 
   ganache:
     image: trufflesuite/ganache-cli:v6.12.2
@@ -77,13 +46,7 @@ services:
     networks:
       default:
         ipv4_address: 172.28.0.11
-    command:
-      -m "dose youth patient boring disagree tuna random tower tornado version violin around"
-      -b 2
-      -g 20000000000
-      -p 8545
-      -a 20
-
+    command: -m "dose youth patient boring disagree tuna random tower tornado version violin around" -b 2 -g 20000000000 -p 8545 -a 20
 
 volumes:
   my_data1:

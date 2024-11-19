@@ -1,5 +1,5 @@
 const { CryptoRpc } = require('../');
-const {assert, expect} = require('chai');
+const { assert, expect } = require('chai');
 const mocha = require('mocha');
 const { before, describe, it } = mocha;
 const ethers = require('ethers');
@@ -22,7 +22,7 @@ const config = {
   }
 };
 
-describe('ETH Tests', function() {
+describe('ETH Tests', function () {
   const currency = 'ETH';
   const currencyConfig = config.currencyConfig;
   const rpcs = new CryptoRpc(config, currencyConfig);
@@ -62,7 +62,7 @@ describe('ETH Tests', function() {
 
   it('should estimate fee for type 2 transaction', async () => {
     sinon.spy(ethRPC.web3.eth, 'getBlock');
-    let maxFee = await ethRPC.estimateFee({txType: 2, priority: 5});
+    let maxFee = await ethRPC.estimateFee({ txType: 2, priority: 5 });
     assert.isDefined(maxFee);
     expect(maxFee).to.be.equal(5154455240);
     expect(ethRPC.web3.eth.getBlock.callCount).to.equal(1);
@@ -80,7 +80,7 @@ describe('ETH Tests', function() {
     sinon.spy(ethRPC.emitter, 'emit');
     sinon.spy(ethRPC.web3.eth, 'getBlock');
     let maxFee = await ethRPC.estimateMaxFee({ percentile: 15 });
-    assert.isDefined(maxFee); 
+    assert.isDefined(maxFee);
     expect(maxFee).to.be.equal(1154455240);
     expect(ethRPC.web3.eth.getBlock.callCount).to.be.lt(10);
     expect(ethRPC.emitter.emit.callCount).to.equal(0);
@@ -112,7 +112,7 @@ describe('ETH Tests', function() {
       nonce: txCount,
       chainId: 1337,
       gasLimit: 25000,
-      gasPrice: 2.1*10e9,
+      gasPrice: 2.1 * 10e9,
       to: config.currencyConfig.sendTo,
       value: Number(util.toWei('123', 'wei'))
     };
@@ -133,7 +133,7 @@ describe('ETH Tests', function() {
         nonce: null,
         chainId: 1337,
         gasLimit: 25000,
-        gasPrice: 2.1*10e9,
+        gasPrice: 2.1 * 10e9,
         to: config.currencyConfig.sendTo,
         value: Number(util.toWei('123', 'wei'))
       };
@@ -145,7 +145,7 @@ describe('ETH Tests', function() {
         rawTx: signedTx
       });
       return signedTx;
-    } catch(err) {
+    } catch (err) {
       expect(err.message).to.include('nonce too low');
     }
   });
@@ -162,7 +162,7 @@ describe('ETH Tests', function() {
         nonce: txCount + 1,
         chainId: 1337,
         gasLimit: 25000,
-        gasPrice: 2.1*10e9,
+        gasPrice: 2.1 * 10e9,
         to: config.currencyConfig.sendTo,
         value: Number(util.toWei('123', 'wei'))
       };
@@ -178,7 +178,7 @@ describe('ETH Tests', function() {
         rawTx: signedTx
       });
       expect(txSend1).to.equal(txSend2);
-    } catch(err) {
+    } catch (err) {
       expect(err.toString()).to.not.exist();
     }
   });
@@ -210,8 +210,8 @@ describe('ETH Tests', function() {
         currency,
         rawTx: signedTx
       });
-      expect(txSend1).to.equal('0x94266a12747ccea60d7566777d22c8e3b7bbaa71e16e69468c547c2bab0b9f90');      
-    } catch(err) {
+      expect(txSend1).to.equal('0x94266a12747ccea60d7566777d22c8e3b7bbaa71e16e69468c547c2bab0b9f90');
+    } catch (err) {
       expect(err.toString()).to.not.exist();
     }
   });
@@ -280,7 +280,7 @@ describe('ETH Tests', function() {
   it('should be able to send many transactions', async () => {
     const address = config.currencyConfig.sendTo;
     const amount = '1000';
-    const payToArray = [{ address, amount }, {address, amount}];
+    const payToArray = [{ address, amount }, { address, amount }];
     const eventEmitter = rpcs.rpcs.ETH.emitter;
     let eventCounter = 0;
     let emitResults = [];

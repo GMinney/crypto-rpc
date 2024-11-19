@@ -16,11 +16,11 @@ const config = {
     sendTo: '2NGFWyW3LBPr6StDuDSNFzQF3Jouuup1rua',
     unlockPassword: 'password',
     rawTx:
-    '0100000001641ba2d21efa8db1a08c0072663adf4c4bc3be9ee5aabb530b2d4080b8a41cca000000006a4730440220062105df71eb10b5ead104826e388303a59d5d3d134af73cdf0d5e685650f95c0220188c8a966a2d586430d84aa7624152a556550c3243baad5415c92767dcad257f0121037aaa54736c5ffa13132e8ca821be16ce4034ae79472053dde5aa4347034bc0a2ffffffff0240787d010000000017a914c8241f574dfade4d446ec90cc0e534cb120b45e387eada4f1c000000001976a9141576306b9cc227279b2a6c95c2b017bb22b0421f88ac00000000'
+      '0100000001641ba2d21efa8db1a08c0072663adf4c4bc3be9ee5aabb530b2d4080b8a41cca000000006a4730440220062105df71eb10b5ead104826e388303a59d5d3d134af73cdf0d5e685650f95c0220188c8a966a2d586430d84aa7624152a556550c3243baad5415c92767dcad257f0121037aaa54736c5ffa13132e8ca821be16ce4034ae79472053dde5aa4347034bc0a2ffffffff0240787d010000000017a914c8241f574dfade4d446ec90cc0e534cb120b45e387eada4f1c000000001976a9141576306b9cc227279b2a6c95c2b017bb22b0421f88ac00000000'
   }
 };
 
-describe('THT Tests', function() {
+describe('THT Tests', function () {
   this.timeout(10000);
   const currency = 'THT';
   const { currencyConfig } = config;
@@ -163,7 +163,7 @@ describe('THT Tests', function() {
       assert(emitData.txid);
       expect(emitData.error === null);
       expect(emitData.vout === 0 || emitData.vout === 1);
-      let transactionObj = {address: emitData.address, amount: emitData.amount};
+      let transactionObj = { address: emitData.address, amount: emitData.amount };
       expect(payToArray.includes(transactionObj));
     }
   });
@@ -227,7 +227,7 @@ describe('THT Tests', function() {
     assert(isValid === false);
   });
 
-  it('should be able to send a batched transaction', async() => {
+  it('should be able to send a batched transaction', async () => {
     let address1 = 'mtXWDB6k5yC5v7TcwKZHB89SUp85yCKshy';
     let amount1 = '10000';
     let address2 = 'msngvArStqsSqmkG7W7Fc9jotPcURyLyYu';
@@ -243,13 +243,13 @@ describe('THT Tests', function() {
     assert(txid);
   });
 
-  describe('Get Blocks', function() {
+  describe('Get Blocks', function () {
     let blockHash;
     before(async () => {
       blockHash = await rpcs.getBestBlockHash({ currency });
       expect(blockHash).to.have.lengthOf('64');
     });
-    
+
     it('should get block', async () => {
       const reqBlock = await rpcs.getBlock({ currency, hash: blockHash });
       expect(reqBlock).to.have.property('hash');
@@ -272,10 +272,10 @@ describe('THT Tests', function() {
       expect(reqBlock).to.have.property('previousblockhash');
       assert(reqBlock);
     });
-  
+
   });
 
-  describe('Get Transactions', function() {
+  describe('Get Transactions', function () {
     let txid;
     before(async () => {
       txid = await rpcs.unlockAndSendToAddress({ currency, address: walletAddress, amount: '10000', passphrase: currencyConfig.unlockPassword });
@@ -297,8 +297,8 @@ describe('THT Tests', function() {
       assert(tx);
       assert(typeof tx === 'object');
     });
-  
-    it('should be able to get a transaction with detail', async() => {
+
+    it('should be able to get a transaction with detail', async () => {
       const tx = await rpcs.getTransaction({ txid, detail: true });
       expect(tx).to.exist;
       expect(tx.txid).to.equal(txid);
@@ -316,10 +316,10 @@ describe('THT Tests', function() {
     });
   });
 
-  describe('Get Wallet Transactions', function() {
+  describe('Get Wallet Transactions', function () {
     let txs;
 
-    describe('Unloaded wallet', function() {
+    describe('Unloaded wallet', function () {
       before(async () => {
         await thought.asyncCall('unloadwallet', [walletName]);
       });
@@ -358,14 +358,14 @@ describe('THT Tests', function() {
 
   });
 
-  describe('Tx outputs', function() {
+  describe('Tx outputs', function () {
     let txid;
     before(async () => {
       txid = await rpcs.unlockAndSendToAddress({ currency, address: config.currencyConfig.sendTo, amount: '10000', passphrase: currencyConfig.unlockPassword });
       expect(txid).to.have.lengthOf(64);
       assert(txid);
     });
-    it('should get tx output info from mempool', async() => {
+    it('should get tx output info from mempool', async () => {
       const output1 = await rpcs.getTxOutputInfo({ txid, vout: 0, includeMempool: true });
       const output2 = await rpcs.getTxOutputInfo({ txid, vout: 1, includeMempool: true });
       let output = [output1, output2].find(v => v.value === 0.0001);
@@ -373,7 +373,7 @@ describe('THT Tests', function() {
       expect(output.scriptPubKey.address).to.equal(config.currencyConfig.sendTo);
     });
 
-    it('should fail to get tx output when not in mempool', async() => {
+    it('should fail to get tx output when not in mempool', async () => {
       let output = null;
       try {
         output = await rpcs.getTxOutputInfo({ txid, vout: 0, includeMempool: false });
@@ -382,8 +382,8 @@ describe('THT Tests', function() {
       }
       expect(output).to.be.null;
     });
-    
-    describe('Tx output after confirmation',function() {
+
+    describe('Tx output after confirmation', function () {
       before(async () => {
         let confirmations = await rpcs.getConfirmations({ currency, txid });
         assert(confirmations != undefined);
@@ -393,15 +393,15 @@ describe('THT Tests', function() {
         expect(confirmations).to.eq(1);
       });
 
-      it('should get tx output info', async() => {
+      it('should get tx output info', async () => {
         const output1 = await rpcs.getTxOutputInfo({ txid, vout: 0 });
         const output2 = await rpcs.getTxOutputInfo({ txid, vout: 1 });
         let output = [output1, output2].find(v => v.value === 0.0001);
         expect(output).to.exist;
         expect(output.scriptPubKey.address).to.equal(config.currencyConfig.sendTo);
       });
-    
-      it('should get tx output info for thoughtcore', async() => {
+
+      it('should get tx output info for thoughtcore', async () => {
         const output1 = await rpcs.getTxOutputInfo({ txid, vout: 0, transformToThoughtcore: true });
         const output2 = await rpcs.getTxOutputInfo({ txid, vout: 1, transformToThoughtcore: true });
         let output = [output1, output2].find(v => v.value === 0.0001);

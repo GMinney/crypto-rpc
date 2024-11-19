@@ -1,5 +1,5 @@
 const { CryptoRpc } = require('../');
-const {assert, expect} = require('chai');
+const { assert, expect } = require('chai');
 const mocha = require('mocha');
 const sinon = require('sinon');
 const { before, describe, it } = mocha;
@@ -20,7 +20,7 @@ const configs = [
       unlockPassword: '',
       privateKey: '0x3669381038794f93b2e30f9fc7edc871aec5351e40af833aa049e4c00a25ec8a',
       rawTx:
-      '0xf8978202e38471a14e6382ea6094000000000000000000000000000000000000000080b244432d4c353a4e2b4265736a3770445a46784f6149703630735163757a382f4f672b617361655a3673376543676b6245493d26a04904c712736ce12808f531996007d3eb1c1e1c1dcf5431f6252678b626385e40a043ead01a06044cd86fba04ae1dc5259c5b3b5556a8bd86aeb8867e8f1e41512a'
+        '0xf8978202e38471a14e6382ea6094000000000000000000000000000000000000000080b244432d4c353a4e2b4265736a3770445a46784f6149703630735163757a382f4f672b617361655a3673376543676b6245493d26a04904c712736ce12808f531996007d3eb1c1e1c1dcf5431f6252678b626385e40a043ead01a06044cd86fba04ae1dc5259c5b3b5556a8bd86aeb8867e8f1e41512a'
     },
     isEVM: true
   },
@@ -36,7 +36,7 @@ const configs = [
       unlockPassword: '',
       privateKey: '0xbc65cb6c016e4e05d56ea272dd2513ab8fb999f85badbd726e2db7e12383b748',
       rawTx:
-      '0xf8978202e38471a14e6382ea6094000000000000000000000000000000000000000080b244432d4c353a4e2b4265736a3770445a46784f6149703630735163757a382f4f672b617361655a3673376543676b6245493d26a04904c712736ce12808f531996007d3eb1c1e1c1dcf5431f6252678b626385e40a043ead01a06044cd86fba04ae1dc5259c5b3b5556a8bd86aeb8867e8f1e41512a'
+        '0xf8978202e38471a14e6382ea6094000000000000000000000000000000000000000080b244432d4c353a4e2b4265736a3770445a46784f6149703630735163757a382f4f672b617361655a3673376543676b6245493d26a04904c712736ce12808f531996007d3eb1c1e1c1dcf5431f6252678b626385e40a043ead01a06044cd86fba04ae1dc5259c5b3b5556a8bd86aeb8867e8f1e41512a'
     },
     isEVM: true
   },
@@ -52,7 +52,7 @@ const configs = [
       unlockPassword: '',
       privateKey: '0x61cad5947d07d2ca69fc57e96c5b79b2927ea263475b17938b2900d0a258faec',
       rawTx:
-      '0xf8978202e38471a14e6382ea6094000000000000000000000000000000000000000080b244432d4c353a4e2b4265736a3770445a46784f6149703630735163757a382f4f672b617361655a3673376543676b6245493d26a04904c712736ce12808f531996007d3eb1c1e1c1dcf5431f6252678b626385e40a043ead01a06044cd86fba04ae1dc5259c5b3b5556a8bd86aeb8867e8f1e41512a'
+        '0xf8978202e38471a14e6382ea6094000000000000000000000000000000000000000080b244432d4c353a4e2b4265736a3770445a46784f6149703630735163757a382f4f672b617361655a3673376543676b6245493d26a04904c712736ce12808f531996007d3eb1c1e1c1dcf5431f6252678b626385e40a043ead01a06044cd86fba04ae1dc5259c5b3b5556a8bd86aeb8867e8f1e41512a'
     },
     isEVM: true
   },
@@ -76,16 +76,16 @@ const configs = [
 ];
 
 configs.forEach((config) => {
-  describe(`${config.chain} Tests: `, function() {
+  describe(`${config.chain} Tests: `, function () {
     const currency = config.chain;
     const currencyConfig = config.currencyConfig;
     const rpcs = new CryptoRpc(config, currencyConfig);
     const evmRPC = rpcs.get(currency);
     let txid = '';
     let blockHash = '';
-  
+
     this.timeout(30000);
-  
+
     before(done => {
       setTimeout(done, 10000);
     });
@@ -93,7 +93,7 @@ configs.forEach((config) => {
     afterEach(() => {
       sinon.restore();
     });
-  
+
     it('should estimate fee', async () => {
       const fee = await rpcs.estimateFee({ currency, nBlocks: 4 });
       assert.isDefined(fee);
@@ -105,7 +105,7 @@ configs.forEach((config) => {
       const txData = {
         nonce: 0,
         gasLimit: 25000,
-        gasPrice: 2.1*10e9,
+        gasPrice: 2.1 * 10e9,
         to: config.currencyConfig.sendTo,
         value: Number(util.toWei('123', 'wei'))
       };
@@ -118,14 +118,14 @@ configs.forEach((config) => {
       });
       expect(sentTx.length).to.equal(66);
     });
-    
+
     it('should catch failed send raw transaction', async () => {
       try {
         // construct the transaction data
         const txData = {
           nonce: 1,
           gasLimit: 25000,
-          gasPrice: 2.1*10e9,
+          gasPrice: 2.1 * 10e9,
           to: config.currencyConfig.sendTo,
           value: Number(util.toWei('123', 'wei'))
         };
@@ -136,14 +136,14 @@ configs.forEach((config) => {
           currency,
           rawTx: signedTx
         });
-      } catch(err) {
+      } catch (err) {
         expect(err.message).to.include('Transaction nonce is too low');
       }
     });
 
     it('should estimate fee for type 2 transaction', async () => {
       sinon.spy(evmRPC.web3.eth, 'getBlock');
-      let maxFee = await evmRPC.estimateFee({txType: 2, priority: 5});
+      let maxFee = await evmRPC.estimateFee({ txType: 2, priority: 5 });
       assert.isDefined(maxFee);
       expect(maxFee).to.be.equal(5000000000);
       expect(evmRPC.web3.eth.getBlock.callCount).to.equal(1);
@@ -155,7 +155,7 @@ configs.forEach((config) => {
       assert.isDefined(maxFee);
       expect(maxFee).to.be.equal(minimumFee * 1e9);
     });
-  
+
     it('should estimate gas price', async () => {
       const gasPrice = await evmRPC.estimateGasPrice();
       assert.isDefined(gasPrice);
@@ -167,7 +167,7 @@ configs.forEach((config) => {
       blockHash = block;
       assert.isTrue(util.isHex(block));
     });
-  
+
     it('should get block', async () => {
       const reqBlock = await rpcs.getBlock({ currency, hash: blockHash });
       assert(reqBlock.hash === blockHash);
@@ -190,13 +190,13 @@ configs.forEach((config) => {
       expect(reqBlock).to.have.property('transactions');
       expect(reqBlock).to.have.property('uncles');
     });
-  
+
     it('should be able to get a balance', async () => {
       const balance = await rpcs.getBalance({ currency });
       assert(util.isAddress(balance[0].account));
       assert.hasAllKeys(balance[0], ['account', 'balance']);
     });
-  
+
     it('should be able to send a transaction', async () => {
       txid = await rpcs.unlockAndSendToAddress({
         currency,
@@ -206,7 +206,7 @@ configs.forEach((config) => {
       });
       assert.isTrue(util.isHex(txid));
     });
-  
+
     it('should be able to send a transaction and specify a custom gasPrice', async () => {
       txid = await rpcs.unlockAndSendToAddress({
         currency,
@@ -219,11 +219,11 @@ configs.forEach((config) => {
       expect(decodedParams.gasPrice).to.equal('30000000000');
       assert.isTrue(util.isHex(txid));
     });
-  
+
     it('should be able to send many transactions', async () => {
       const address = config.currencyConfig.sendTo;
       const amount = '1000';
-      const payToArray = [{ address, amount }, {address, amount}];
+      const payToArray = [{ address, amount }, { address, amount }];
       const eventEmitter = rpcs.rpcs[config.chain].emitter;
       let eventCounter = 0;
       let emitResults = [];
@@ -257,7 +257,7 @@ configs.forEach((config) => {
       expect(outputArray[1].txid).to.have.lengthOf(66);
       expect(outputArray[1].txid).to.not.equal(outputArray[0].txid);
     });
-  
+
     it('should reject when one of many transactions fails', async () => {
       const address = config.currencyConfig.sendTo;
       const amount = '1000';
@@ -284,29 +284,29 @@ configs.forEach((config) => {
       expect(emitResults.length).to.equal(1);
       assert(emitResults[0].error);
     });
-  
+
     it('should be able to get a transaction', async () => {
       const tx = await rpcs.getTransaction({ currency, txid });
       assert.isDefined(tx);
       assert.isObject(tx);
     });
-  
+
     it('should be able to decode a raw transaction', async () => {
       const { rawTx } = config.currencyConfig;
       const decoded = await rpcs.decodeRawTransaction({ currency, rawTx });
       assert.isDefined(decoded);
     });
-  
+
     it('should get the tip', async () => {
       const tip = await rpcs.getTip({ currency });
       assert.hasAllKeys(tip, ['height', 'hash']);
     });
-  
+
     it('should get confirmations', async () => {
       const confirmations = await rpcs.getConfirmations({ currency, txid });
       assert.isDefined(confirmations);
     });
-  
+
     it('should not get confirmations with invalid txid', async () => {
       try {
         await rpcs.getConfirmations({ currency, txid: 'wrongtxid' });
@@ -314,7 +314,7 @@ configs.forEach((config) => {
         assert.isDefined(err);
       }
     });
-  
+
     it('should validate address', async () => {
       const isValid = await rpcs.validateAddress({
         currency,
@@ -323,7 +323,7 @@ configs.forEach((config) => {
       const utilVaildate = util.isAddress(config.currencyConfig.sendTo);
       assert.isTrue(isValid === utilVaildate);
     });
-  
+
     it('should not validate bad address', async () => {
       const isValid = await rpcs.validateAddress({
         currency,
@@ -332,5 +332,5 @@ configs.forEach((config) => {
       const utilVaildate = util.isAddress('NOTANADDRESS');
       assert.isTrue(isValid === utilVaildate);
     });
-  });  
+  });
 });
