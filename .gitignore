@@ -22,6 +22,6 @@ npm-debug.log
 dist
 src/vendor
 src/dist
-config.js
+#config.js
 blockchain/EVM/build
 blockchain/solana/test/data

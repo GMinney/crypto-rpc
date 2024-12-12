@@ -20,6 +20,7 @@
     "xrpl": "^4.0.0"
   },
   "devDependencies": {
+    "@types/mocha": "10.0.10",
     "assert": "^2.1.0",
     "chai": "5.1.1",
     "eslint": "^9.9.1",
