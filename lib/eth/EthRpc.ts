@@ -1,14 +1,23 @@
-const Web3 = require('web3');
-const promptly = require('promptly');
-const ethers = require('ethers');
-const util = require('util');
-const EventEmitter = require('events');
-const chainConfig = require('./chains');
+import Web3, { Web3BaseProviderConstructor } from 'web3';
+import * as promptly from 'promptly';
+import { ethers } from 'ethers';
+import * as util from 'util';
+import { EventEmitter } from 'events';
+import { chainConfig } from './chains';
+import { IEthRpcBalances, IEthRpcDecodeDataTransaction, IEthRpcEmitData, IEthRpcGetTransactionReceipt } from './EthTypes';
 
 const passwordPromptAsync = util.promisify(promptly.password);
 const setTimeoutAsync = util.promisify(setTimeout);
 
-class EthRPC {
+export class EthRPC {
+  config: any;
+  chain: string;
+  web3: Web3;
+  account: string;
+  emitter: EventEmitter;
+  blockCache: Map<number, any>;
+  blockGasPriceCache: Map<number, any>;
+  blockMaxPriorityFeeCache: Map<number, any>;
   constructor(config) {
     this.config = config;
     this.chain = this.config.chain;
@@ -23,7 +32,7 @@ class EthRPC {
   getWeb3(web3Config) {
     const { protocol, host, port, options } = web3Config;
     const connectionString = port ? `${protocol}://${host}:${port}` : `${protocol}://${host}`;
-    let Provider = null;
+    let Provider: Web3BaseProviderConstructor
     switch (protocol) {
       case 'http':
         Provider = Web3.providers.HttpProvider;
@@ -38,14 +47,11 @@ class EthRPC {
         Provider = Web3.providers.WebsocketProvider;
         break;
       case 'ipc':
-        Provider = Web3.providers.IpcProvider;
-        break;
+        throw new Error("IPC not supported for web3");
+      default:
+        throw new Error("Invalid protocol");
     }
-    if (!Provider) {
-      throw new Error('Please provide a valid protocol');
-    }
-    if (protocol !== 'ipc') return new Web3(new Provider(connectionString, options || {}));
-    return new Web3(new Provider(connectionString));
+    return new Web3(new Provider(connectionString, options || {}));
   }
 
   async isUnlocked() {
@@ -66,14 +72,14 @@ class EthRPC {
     return accounts[0];
   }
 
-  async cmdlineUnlock({ time }) {
-    const timeHex = this.web3.utils.toHex(time);
-    const passphrase = await passwordPromptAsync(' >');
-    const account = await this.getAccount();
-    await this.web3.eth.personal.unlockAccount(account, passphrase, timeHex);
-    this.emitter.emit('unlocked');
-    console.warn(account, ' unlocked for ' + time + ' seconds');
-  }
+  // async cmdlineUnlock({ time }) {
+  //   const timeHex: number = parseFloat(this.web3.utils.toHex(time));
+  //   const passphrase = await passwordPromptAsync();
+  //   const account = await this.getAccount();
+  //   await this.web3.eth.personal.unlockAccount(account, passphrase, timeHex);
+  //   this.emitter.emit('unlocked');
+  //   console.warn(account, ' unlocked for ' + time + ' seconds');
+  // }
 
   async getBalance({ address }) {
     if (address) {
@@ -81,7 +87,7 @@ class EthRPC {
       return balance;
     } else {
       const accounts = await this.web3.eth.getAccounts();
-      const balances = [];
+      const balances: IEthRpcBalances[] = [];
       for (let account of accounts) {
         const balance = await this.web3.eth.getBalance(account);
         balances.push({ account, balance });
@@ -122,13 +128,13 @@ class EthRPC {
       return result;
     } catch (error) {
       this.emitter.emit('locked');
-      throw new Error(error);
+      throw error;
     }
   }
 
   async unlockAndSendToAddress({ address, amount, fromAccount, passphrase, gasPrice, nonce, gas }) {
     if (passphrase === undefined) {
-      passphrase = await passwordPromptAsync('> ');
+      passphrase = await passwordPromptAsync();
     }
     console.warn('Unlocking for a single transaction.');
     const tx = await this.sendToAddress({ address, amount, fromAccount, passphrase, gasPrice, nonce, gas });
@@ -137,13 +143,13 @@ class EthRPC {
 
   async unlockAndSendToAddressMany({ payToArray, passphrase, fromAccount, gasPrice, nonce, gas }) {
     if (passphrase === undefined) {
-      passphrase = await passwordPromptAsync('> ');
+      passphrase = await passwordPromptAsync();
     }
 
-    const resultArray = [];
+    const resultArray: IEthRpcEmitData[] = [];
     for (const payment of payToArray) {
       const { address, amount, id } = payment;
-      const emitData = { address, amount, id };
+      const emitData: IEthRpcEmitData = { address, amount, id };
       this.emitter.emit('attempt', emitData);
       try {
         const txid = await this.sendToAddress({ address, amount, fromAccount, passphrase, gasPrice, nonce, gas });
@@ -151,7 +157,7 @@ class EthRPC {
         resultArray.push(emitData);
         this.emitter.emit('success', emitData);
 
-        await new Promise(async (resolve, reject) => {
+        await new Promise<void>(async (resolve, reject) => {
           try {
             let confirmations = 0;
             let timeout = new Date().getTime() + 120000;
@@ -162,7 +168,7 @@ class EthRPC {
               }
 
               await setTimeoutAsync(1000);
-              confirmations = await this.getConfirmations({ txid });
+              confirmations = Number(await this.getConfirmations({ txid }) || 0);
             }
 
             resolve();
@@ -171,7 +177,9 @@ class EthRPC {
           }
         });
       } catch (error) {
-        emitData.error = error;
+        if (error instanceof Error){
+          emitData.error = error.message;
+        }
         resultArray.push(emitData);
         this.emitter.emit('failure', emitData);
       }
@@ -190,7 +198,7 @@ class EthRPC {
    * @param {number} [params.priority] - Optional: For type 2 txs, The priority fee to be used with the baseFee.
    * @returns {Promise<number>} The estimated fee. If txType is '2', returns the sum of maxFee and priorityFee. Otherwise, returns a number.
    */
-  async estimateFee({ nBlocks, txType = '0', priority, percentile }) {
+  async estimateFee({ txType = '0', priority, percentile }) {
     const _txType = txType.toString().toLowerCase();
     switch (_txType) {
       case 'eip-1559':
@@ -200,7 +208,7 @@ class EthRPC {
       case 'legacy':
       case '0':
       default:
-        return await this.estimateGasPrice(nBlocks);
+        return await this.estimateGasPrice();
     }
   }
 
@@ -228,11 +236,12 @@ class EthRPC {
    * @returns {Promise<number>} The estimated gas price.
    */
   async estimateGasPrice() {
-    const defaultEstimate = parseInt(await this.web3.eth.getGasPrice());
+    const defaultEstimate: bigint = await this.web3.eth.getGasPrice();
     return this._estimateFee({
       cache: this.blockGasPriceCache,
       defaultEstimate,
       percentile: 25,
+      getFees: (txs) => txs.map((tx) => parseInt(tx.gasPrice)),
     });
   }
 
@@ -245,20 +254,20 @@ class EthRPC {
    */
   async estimateMaxFee({ percentile, priority }) {
     const lastBlock = await this.web3.eth.getBlock('latest');
-    const baseFeePerGas = parseInt(lastBlock.baseFeePerGas) ? parseInt(lastBlock.baseFeePerGas) : 0;
+    const baseFeePerGas = lastBlock.baseFeePerGas ? lastBlock.baseFeePerGas : BigInt(0);
     const gwei = parseInt(this.web3.utils.toWei('1', 'gwei'));
 
     if (priority && parseInt(priority) > 0) {
       // user defined priority fee
-      return 2 * baseFeePerGas + (priority * gwei);
+      return BigInt(2) * baseFeePerGas + BigInt(priority * gwei);
     }
     if (percentile && parseInt(percentile) > 0 && parseInt(percentile) <= 100) {
       // percentile priority fee
       const maxPriorityFee = await this.estimateMaxPriorityFee({ percentile });
-      return 2 * baseFeePerGas + maxPriorityFee;
+      return BigInt(2) * baseFeePerGas + maxPriorityFee;
     }
     // default max fee formula. ensures inclusion in next block
-    return 2 * baseFeePerGas + (2.5 * gwei);
+    return BigInt(2) * baseFeePerGas + BigInt(2.5 * gwei);
   }
 
   /**
@@ -292,11 +301,11 @@ class EthRPC {
     const cache = this.blockCache;
     const blocks = await Promise.all(
       [...Array(n).keys()].map(async (n) => {
-        const targetBlockNumber = bestBlock - n;
+        const targetBlockNumber = Number(bestBlock - BigInt(n));
         if (cache && cache.has(targetBlockNumber)) {
           return cache.get(targetBlockNumber);
         }
-        const block = await this.web3.eth.getBlock(targetBlockNumber, 1);
+        const block = await this.web3.eth.getBlock(targetBlockNumber, true);
         if (!block) {
           throw new Error(`Unable to fetch block ${targetBlockNumber}`);
         }
@@ -326,13 +335,13 @@ class EthRPC {
    */
   _getPercentileFees({ percentile = 25, blocks, cache, getFees }) {
     const percentileKey = `percentile${percentile}`;
-    let fees = [];
+    let fees: any[] = [];
     for (const block of blocks) {
       if (!block || !block.number || (!block.transactions || !block.transactions.length)) {
         continue;
       }
 
-      let percentileValue;
+      let percentileValue: any;
       // get percentile fee
       if (cache && cache.has(block.number) && cache.get(block.number)[percentileKey]) {
         percentileValue = cache.get(block.number)[percentileKey];
@@ -350,7 +359,7 @@ class EthRPC {
         blockFees[percentileKey] = percentileValue;
         cache.set(block.number, blockFees);
         if (cache.size > 9) {
-          cache.delete(Array.from(cache.keys()).sort((a, b) => a - b)[0]);
+          cache.delete(Array.from(cache.keys()).sort((a:any, b:any) => a - b)[0]);
         }
       }
       fees.push(percentileValue);
@@ -385,14 +394,14 @@ class EthRPC {
     return this.web3.eth.personal.lockAccount(account);
   }
 
-  async getTransaction({ txid, getConfirmations = false }) {
-    const tx = await this.web3.eth.getTransaction(txid);
+  async getTransaction({ txid, getConfirmations = false }): Promise<IEthRpcGetTransactionReceipt> {
+    const tx:IEthRpcGetTransactionReceipt = await this.web3.eth.getTransaction(txid);
     if (!getConfirmations || !tx) {
       return tx;
     }
     const bestBlock = await this.web3.eth.getBlockNumber();
-    tx.confirmations = (tx.blockNumber || tx.blockNumber === 0) ? bestBlock - tx.blockNumber + 1 : 0;
-    return tx;
+    const confirmations = (tx.blockNumber || tx.blockNumber === String(0)) ? bestBlock - BigInt(tx.blockNumber) + BigInt(1) : BigInt(0);
+    return { ...tx, confirmations };
   }
 
   /**
@@ -409,24 +418,24 @@ class EthRPC {
 
   async getRawTransaction({ txid }) {
     return new Promise((resolve, reject) => {
-      this.web3.currentProvider.send(
-        { method: 'getRawTransaction', args: [txid] },
-        (err, data) => {
-          if (err) {
-            return reject(err);
-          }
-          resolve(data);
-        }
-      );
+      if (this.web3.currentProvider) {
+        this.web3.currentProvider.request({ method: 'getRawTransaction', params: [txid] })
+          .then((data: unknown) => resolve(data))
+          .catch((err: any) => reject(err));
+      }
+
     });
   }
 
-  sendRawTransaction({ rawTx }) {
+  async sendRawTransaction({ rawTx }): Promise<string> {
     return new Promise((resolve, reject) => {
-      const errorHandler = (err) => {
+      const errorHandler = async (err) => {
         if (err && err.message && (err.message.includes('already imported') || err.message.includes('already known'))) {
-          const txData = this.decodeRawTransaction({ rawTx });
-          return resolve(txData.txid);
+          const txData = await this.decodeRawTransaction({ rawTx });
+          if (txData.txid) {
+            return resolve(txData.txid);
+          }
+          reject(new Error('Transaction ID is null'));
         }
         reject(err);
       };
@@ -438,35 +447,30 @@ class EthRPC {
     });
   }
 
-  decodeRawTransaction({ rawTx }) {
-    const decodedTx = ethers.utils.parseTransaction(rawTx);
-    const {
-      to,
-      from,
-      nonce,
-      hash,
-      value,
-      type,
-      gasPrice,
-      maxPriorityFeePerGas,
-      maxFeePerGas,
-      gasLimit,
-      data
-    } = decodedTx;
+  async decodeRawTransaction({ rawTx }): Promise<IEthRpcDecodeDataTransaction> {
 
-    return {
-      to: to ? to.toLowerCase() : undefined,
-      from: from ? from.toLowerCase() : undefined,
-      nonce,
-      txid: hash,
-      value: value ? Number(value) : undefined,
-      type: type || undefined,
-      gasPrice: gasPrice ? Number(gasPrice) : undefined,
-      maxPriorityFeePerGas: maxPriorityFeePerGas ? Number(maxPriorityFeePerGas) : undefined,
-      maxFeePerGas: maxFeePerGas ? Number(maxFeePerGas) : undefined,
-      gasLimit: gasLimit ? Number(gasLimit) : undefined,
-      data
-    };
+
+    return new Promise<IEthRpcDecodeDataTransaction>((resolve, reject) => {
+      try{
+        const decodedTx = ethers.Transaction.from(rawTx);
+        const internalTransaction: IEthRpcDecodeDataTransaction = {
+          to: decodedTx.to ? decodedTx.to.toLowerCase() : null,
+          from: decodedTx.from ? decodedTx.from.toLowerCase() : null,
+          nonce: decodedTx.nonce ? Number(decodedTx.nonce) : undefined,
+          txid: decodedTx.hash ? decodedTx.hash.toLowerCase() : null,
+          value: decodedTx.value ? Number(decodedTx.value) : undefined,
+          type: decodedTx.type || undefined,
+          gasPrice: decodedTx.gasPrice ? Number(decodedTx.gasPrice) : undefined,
+          maxPriorityFeePerGas: decodedTx.maxPriorityFeePerGas ? Number(decodedTx.maxPriorityFeePerGas) : undefined,
+          maxFeePerGas: decodedTx.maxFeePerGas ? Number(decodedTx.maxFeePerGas) : undefined,
+          gasLimit: decodedTx.gasLimit ? Number(decodedTx.gasLimit) : undefined,
+          data: decodedTx.data ? decodedTx.data : undefined
+        }
+        return resolve(internalTransaction);
+      } catch(e){
+        return reject(e);
+      }
+    });
   }
 
   getBlock({ hash }) {
@@ -492,6 +496,7 @@ class EthRPC {
   }
 
   async validateAddress({ address }) {
+    throw new Error('Deprecated method. Check EthRpc.ts.');
     return await this.web3.utils.isAddress(address);
   }
 
@@ -507,4 +512,3 @@ class EthRPC {
     return this.web3.eth.getNodeInfo();
   }
 }
-module.exports = EthRPC;

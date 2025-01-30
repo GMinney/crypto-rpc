@@ -1,4 +1,4 @@
-const chainConfig = {
+export const chainConfig = {
   ETH: {
     priorityFee: 1 // in gwei
   },
@@ -15,5 +15,3 @@ const chainConfig = {
     priorityFee: 1
   }
 };
-
-module.exports = chainConfig;

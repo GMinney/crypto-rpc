@@ -1,27 +1,48 @@
-const ThoughtRPC = require('./thought');
-const promptly = require('promptly');
-const util = require('util');
-const EventEmitter = require('events');
+// import { ThoughtRPC } from "./thought";
+import * as promptly from 'promptly';
+import * as util from 'util';
+import EventEmitter from "events";
+// import * as http from "http";
+// import * as https from "https";
+import { IRpcClientOptions } from '../../../thoughtd-rpc/lib/types';
+import { ThoughtRpcClient } from "../../../thoughtd-rpc/lib";
+
+
 
 const passwordPromptAsync = util.promisify(promptly.password);
 
-class ThtRpc {
-  constructor(config) {
-    this.config = config;
-    const {
-      rpcPort: port,
-      rpcUser: user,
-      rpcPass: pass,
-      host,
-      protocol
-    } = config;
-    this.rpc = new ThoughtRPC({ host, port, user, pass, protocol });
+export class THTRPC extends ThoughtRpcClient {
+  opts: IRpcClientOptions; 
+  thoughtRpcClient: ThoughtRpcClient;
+  emitter: EventEmitter; 
+
+
+  //TODO: write a constructor to take opts as an argument
+  // args: { protocol: typeof http | typeof https; };
+  // httpOptions: { rejectUnauthorized: boolean; };
+  
+
+
+
+  constructor(opts: IRpcClientOptions) {
+    // const {
+    //   rpcPort: port,
+    //   rpcUser: user,
+    //   rpcPass: pass,
+    //   host,
+    //   protocol
+    // } = config;
+    // const thoughtRpcOpts: IRpcClientOptions = {host, port, user, pass, protocol};
+
+    super(opts);
+    this.opts = opts;
+    this.thoughtRpcClient = new ThoughtRpcClient(opts);
     this.emitter = new EventEmitter();
   }
 
-  asyncCall(method, args) {
+  asyncCall(method: string, args: any): any {
     return new Promise((resolve, reject) => {
-      this.rpc[method](...args, (err, response) => {
+      this.thoughtRpcClient[method](...args, (err, response) => {
         if (err instanceof Error) {
           return reject(err);
         }
@@ -41,9 +62,9 @@ class ThtRpc {
     });
   }
 
-  async cmdlineUnlock({ time }) {
-    return this.asyncCall('cmdlineUnlock', [time]);
-  }
+  // async cmdlineUnlock({ time }) {
+  //   return this.asyncCall('cmdlineUnlock', [time]);
+  // }
 
   async sendMany({ account, batch, options }) {
     let batchClone = Object.assign({}, batch);
@@ -66,7 +87,7 @@ class ThtRpc {
 
   async unlockAndSendToAddress({ address, amount, passphrase }) {
     if (passphrase === undefined) {
-      passphrase = await passwordPromptAsync('> ');
+      passphrase = await passwordPromptAsync();
     }
     await this.walletUnlock({ passphrase, time: 10800 });
     const tx = await this.sendToAddress({ address, amount });
@@ -74,22 +95,26 @@ class ThtRpc {
     return tx;
   }
 
+  
+
+
   async unlockAndSendToAddressMany({ account, payToArray, passphrase, time = 10800, maxValue = 10 * 1e8, maxOutputs = 1 }) {
     let payToArrayClone = [...payToArray];
     if (passphrase === undefined) {
-      passphrase = await passwordPromptAsync('> ');
+      passphrase = await passwordPromptAsync();
     }
     await this.walletUnlock({ passphrase, time });
-    let payToArrayResult = [];
+    let payToArrayResult: PaymentType[] = [];
     while (payToArrayClone.length) {
       let currentValue = 0;
       let currentOutputs = 0;
       let paymentsObj = {};
-      let paymentsArr = [];
+      let paymentsArr: PaymentType[] = [];
       if (payToArrayClone.length < maxOutputs) {
         maxOutputs = payToArrayClone.length;
       }
       while (currentValue < maxValue && currentOutputs < maxOutputs) {
+        // extract the first payment and destruct it
         const { address, amount, id } = payToArrayClone.shift();
         paymentsArr.push({ address, amount, id });
         const emitAttempt = {
@@ -105,7 +130,7 @@ class ThtRpc {
         currentValue += amount;
         currentOutputs++;
       }
-      let emitData = {
+      let emitData: PaymentType = {
         txid: '',
         vout: '',
         id: '',
@@ -114,15 +139,21 @@ class ThtRpc {
       };
       let txid;
       let txDetails;
+      let options = {}; // no options
       try {
-        txid = await this.sendMany({ account, batch: paymentsObj });
+        txid = await this.sendMany({ account, batch: paymentsObj, options});
         emitData.txid = txid;
       } catch (error) {
-        emitData.error = error;
+        if (error instanceof Error) {
+          emitData.error = error;
+        }
+
       }
       try {
         if (txid) {
-          txDetails = await this.getTransaction({ txid });
+          let detail = false;
+          let verbose = 1;
+          txDetails = await this.getTransaction({ txid, detail, verbose });
         }
       } catch (error) {
         console.error(`Unable to get transaction details for txid: ${txid}.`);
@@ -159,7 +190,7 @@ class ThtRpc {
     return payToArrayResult;
   }
 
-  async getWalletInfo() {
+  async getWalletInfo(): Promise<WalletInfo> {
     return this.asyncCall('getWalletInfo', []);
   }
 
@@ -207,12 +238,12 @@ class ThtRpc {
     return this.asyncCall('getBestBlockHash', []);
   }
 
-  async getTransaction({ txid, detail = false, verbosity }) {
-    const tx = await this.getRawTransaction({ txid, verbosity });
+  async getTransaction({ txid, detail = false, verbose }) {
+    const tx = await this.getRawTransaction({ txid });
 
     if (tx && detail) {
       for (let input of tx.vin) {
-        const prevTx = await this.getTransaction({ txid: input.txid });
+        const prevTx = await this.getTransaction({ txid: input.txid, verbose });
         const utxo = prevTx.vout[input.vout];
         const { value } = utxo;
         const address = utxo.scriptPubKey.address ||
@@ -253,14 +284,18 @@ class ThtRpc {
     return this.asyncCall('listTransactions', [label, count, skip, inclWatchOnly]);
   }
 
-  async getRawTransaction({ txid, verbosity = 1 }) {
+  async getRawTransaction({ txid, verbose = true }) {
     try {
-      return await this.asyncCall('getRawTransaction', [txid, verbosity]);
+      return await this.asyncCall('getRawTransaction', [txid, verbose]);
     } catch (err) {
-      if (err.code === -5) {
-        return null;
+      if (err instanceof Error){
+        // Handle err.code at some point
+        // if (err.code === -5) {
+        //   return null;
+        // }
+        // throw err;
       }
-      throw err;
+
     }
   }
 
@@ -281,7 +316,9 @@ class ThtRpc {
   }
 
   async getConfirmations({ txid }) {
-    const tx = await this.getTransaction({ txid });
+    const detail = true;
+    const verbose = true;
+    const tx = await this.getTransaction({ txid, detail, verbose });
     if (!tx) {
       return null;
     }
@@ -332,4 +369,15 @@ class ThtRpc {
   }
 }
 
-module.exports = ThtRpc;
+interface PaymentType {
+  address: string;
+  amount: string;
+  id: string;
+  txid?: string;
+  vout?: string;
+  error?: Error;
+}
+
+interface WalletInfo {
+  unlocked_until: number;
+}

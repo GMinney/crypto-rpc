@@ -1,8 +1,11 @@
-const EthRPC = require('../eth/EthRpc');
-const erc20 = require('./erc20.json');
-const ethers = require('ethers');
+import { EthRPC } from '../eth/EthRpc';
+import { IEthRpcBalances, IEthRpcDecodeDataTransaction } from '../eth/EthTypes';
+import erc20 from "./erc20.json" with { type: "json" };
+import { ethers } from 'ethers';
 
-class Erc20RPC extends EthRPC {
+export class Erc20RPC extends EthRPC {
+  tokenContractAddress: string;
+  erc20Contract: any;
   constructor(config) {
     super(config);
     this.tokenContractAddress = config.tokenContractAddress;
@@ -46,7 +49,7 @@ class Erc20RPC extends EthRPC {
       }
     } catch (error) {
       this.emitter.emit('locked');
-      throw new Error(error);
+      throw error;
     }
 
     return result;
@@ -60,7 +63,7 @@ class Erc20RPC extends EthRPC {
       return balance;
     } else {
       const accounts = await this.web3.eth.getAccounts();
-      const balances = [];
+      const balances: IEthRpcBalances[] = [];
       for (let account of accounts) {
         const balance = await this.getBalance({ address: account });
         balances.push({ account, balance });
@@ -69,18 +72,35 @@ class Erc20RPC extends EthRPC {
     }
   }
 
-  async decodeRawTransaction({ rawTx }) {
-    const decodedEthTx = await super.decodeRawTransaction({ rawTx });
+  async decodeRawTransaction({ rawTx }): Promise<IEthRpcDecodeDataTransaction> {
+    // const decodedEthTx: IEthRpcDecodeDataTransaction = super.decodeRawTransaction({ rawTx });
+    const decodedEthTx = ethers.Transaction.from(rawTx);
+    const internalTransaction: IEthRpcDecodeDataTransaction = {
+      to: decodedEthTx.to,
+      from: decodedEthTx.from,
+      nonce: decodedEthTx.nonce,
+      txid: decodedEthTx.hash,
+      value: Number(decodedEthTx.value) / 10 ** 18,
+      type: Number(decodedEthTx.type),
+      gasPrice: Number(decodedEthTx.gasPrice) / 10 ** 9,
+      maxPriorityFeePerGas: Number(decodedEthTx.maxPriorityFeePerGas) / 10 ** 9,
+      maxFeePerGas: Number(decodedEthTx.maxFeePerGas) / 10 ** 9,
+      gasLimit: Number(decodedEthTx.gasLimit),
+      data: decodedEthTx.data
+    }
     if (decodedEthTx.data) {
       try {
-        const erc20Interface = new ethers.utils.Interface(erc20);
-        decodedEthTx.decodedData = await erc20Interface.parseTransaction({ data: decodedEthTx.data });
+        const erc20Contract = new ethers.Contract(this.tokenContractAddress, erc20);
+
+        internalTransaction.decodedData = await erc20Contract.interface.parseTransaction({ data: decodedEthTx.data });
       } catch (err) {
-        decodedEthTx.decodedData = undefined;
+        internalTransaction.decodedData = undefined;
       }
     }
-    return decodedEthTx;
+    else {
+      internalTransaction.decodedData = null;
+    }
+    return internalTransaction;
   }
 }
 
-module.exports = Erc20RPC;

@@ -1,5 +1,5 @@
-module.exports = {
-  BalanceProgram: require('./bin/balance'),
-  SendProgram: require('./bin/send'),
-  CryptoRpc: require('./lib')
-};
+import BalanceProgram from './bin/balance';
+import SendProgram from './bin/send';
+import CryptoRpc from './lib';
+import { THTRPC } from './ThtRpc';
+export { BalanceProgram, SendProgram, CryptoRpc, THTRPC };
